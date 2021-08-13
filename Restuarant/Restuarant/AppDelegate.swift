@@ -1,0 +1,109 @@
+//
+//  AppDelegate.swift
+//  Restuarant
+//
+//  Created by Russ Rosaura on 7/19/21.
+//  Copyright © 2021 Russ Rosaura. All rights reserved.
+//
+
+import UIKit
+import CoreData
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    
+    var window: UIWindow?
+    var orderTabBarItem: UITabBarItem!
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        let temporaryDirectory = NSTemporaryDirectory()
+        let urlCache = URLCache(memoryCapacity: 25_000_000, diskCapacity: 50_000_000, diskPath: temporaryDirectory)
+        URLCache.shared = urlCache
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(updateOrderBadge), name: MenuController.orderUpdatedNotification, object: nil)
+
+        orderTabBarItem = (self.window?.rootViewController as? UITabBarController)?.viewControllers?[1].tabBarItem
+        
+        updateOrderBadge()
+        
+        return true
+    }
+    
+    func application(_ application: UIApplication, shouldSaveApplicationState coder: NSCoder) -> Bool {
+        return true
+    }
+    
+    func application(_ application: UIApplication, shouldRestoreApplicationState coder: NSCoder) -> Bool {
+        return true
+    }
+    
+    @objc func updateOrderBadge() {
+        switch MenuController.shared.order.menuItems.count {
+        case 0:
+            orderTabBarItem.badgeValue = nil
+        case let count:
+            orderTabBarItem.badgeValue = String(count)
+        }
+    }
+    
+    func application(_ application: UIApplication, willFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        MenuController.shared.loadOrder()
+        MenuController.shared.loadItems()
+        
+        MenuController.shared.loadRemoteData()
+        
+        return true
+    }
+    
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        MenuController.shared.saveOrder()
+        MenuController.shared.saveItems()
+    }
+
+    // MARK: - Core Data stack
+
+    lazy var persistentContainer: NSPersistentContainer = {
+        /*
+         The persistent container for the application. This implementation
+         creates and returns a container, having loaded the store for the
+         application to it. This property is optional since there are legitimate
+         error conditions that could cause the creation of the store to fail.
+        */
+        let container = NSPersistentContainer(name: "Restuarant")
+        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
+            if let error = error as NSError? {
+                // Replace this implementation with code to handle the error appropriately.
+                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+                 
+                /*
+                 Typical reasons for an error here include:
+                 * The parent directory does not exist, cannot be created, or disallows writing.
+                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
+                 * The device is out of space.
+                 * The store could not be migrated to the current model version.
+                 Check the error message to determine what the actual problem was.
+                 */
+                fatalError("Unresolved error \(error), \(error.userInfo)")
+            }
+        })
+        return container
+    }()
+
+    // MARK: - Core Data Saving support
+
+    func saveContext () {
+        let context = persistentContainer.viewContext
+        if context.hasChanges {
+            do {
+                try context.save()
+            } catch {
+                // Replace this implementation with code to handle the error appropriately.
+                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+                let nserror = error as NSError
+                fatalError("Unresolved error \(nserror), \(nserror.userInfo)")
+            }
+        }
+    }
+
+}
+
